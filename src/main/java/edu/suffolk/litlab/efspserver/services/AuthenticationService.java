@@ -11,6 +11,9 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +32,12 @@ public class AuthenticationService {
   }
 
   @POST
+  @Operation(summary="Log in the user to all of the requested e-filing EFMs",
+    description="Passes in a ",
+    responses = {
+      @ApiResponse(description= "The logged-in tokens"),
+      @ApiResponse(responseCode="403", description="login information not valid")
+    })
   public Response authenticateUser(@Context HttpHeaders httpHeaders, String loginInfo) {
     MDC.put(MDCWrappers.OPERATION, "AuthenticationService.authenticateUser");
     ObjectMapper mapper = new ObjectMapper();
