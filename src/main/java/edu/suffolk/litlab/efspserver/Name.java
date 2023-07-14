@@ -86,8 +86,9 @@ public class Name {
     return lastName;
   }
 
-  /** If there's only a first name, then us it, otherwise take only the last name. Used to create
-   * the titles of cases, i.e. Jones v. Discover, etc.
+  /**
+   * If there's only a first name, then us it, otherwise take only the last name. Used to create the
+   * titles of cases, i.e. Jones v. Discover, etc.
    */
   public String getTitleName() {
     if (lastName == null || lastName.isBlank()) {

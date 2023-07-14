@@ -1,7 +1,5 @@
 package edu.suffolk.litlab.efspserver.services.cases;
 
-import java.util.Optional;
-
 import edu.suffolk.litlab.efspserver.Name;
 import edu.suffolk.litlab.efspserver.ecf.EcfCaseTypeFactory;
 import gov.niem.niem.niem_core._2.CaseType;
@@ -9,6 +7,7 @@ import gov.niem.niem.niem_core._2.OrganizationType;
 import gov.niem.niem.niem_core._2.PersonNameType;
 import gov.niem.niem.niem_core._2.PersonType;
 import https.docs_oasis_open_org.legalxml_courtfiling.ns.v5_0.caseresponse.GetCaseResponseMessageType;
+import java.util.Optional;
 import oasis.names.tc.legalxml_courtfiling.schema.xsd.caseresponsemessage_4.CaseResponseMessageType;
 import oasis.names.tc.legalxml_courtfiling.schema.xsd.commontypes_4.CaseParticipantType;
 import tyler.ecf.extensions.common.CaseAugmentationType;
@@ -42,10 +41,7 @@ public class ECFToReturn {
 
     } else if (o instanceof PersonType pt) {
       PersonNameType pnt = pt.getPersonName();
-      
-
     }
-    
 
     return null;
   }
