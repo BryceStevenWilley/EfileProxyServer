@@ -133,14 +133,14 @@ public class CodesServiceTest {
   @Test
   public void testGetCase() throws JsonMappingException, JsonProcessingException {
     ObjectMapper mapper = new ObjectMapper();
-    JsonNode node = mapper.readTree(getServerResponseAt("/courts/adams/case_types/1234"));
+    JsonNode node = mapper.readTree(getServerResponseAt("/courts/adams/case_types/25361"));
     assertTrue(node.has("getCaseSubtypes"), "didn't have case sub types: " + node);
     assertEquals(
-        ServiceHelpers.EXTERNAL_URL + "/jurisdictions/illinois/codes/courts/adams/case_types/1234/case_subtypes",
+        ServiceHelpers.EXTERNAL_URL + "/jurisdictions/illinois/codes/courts/adams/case_types/25361/case_subtypes",
         node.get("getCaseSubtypes").get("url").asText());
     assertTrue(node.has("getPartyTypes"));
     assertEquals(
-        ServiceHelpers.EXTERNAL_URL + "/jurisdictions/illinois/codes/courts/adams/case_types/1234/party_types",
+        ServiceHelpers.EXTERNAL_URL + "/jurisdictions/illinois/codes/courts/adams/case_types/25361/party_types",
         node.get("getPartyTypes").get("url").asText());
   }
 

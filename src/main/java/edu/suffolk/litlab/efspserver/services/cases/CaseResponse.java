@@ -1,8 +1,8 @@
 package edu.suffolk.litlab.efspserver.services.cases;
 
 import edu.suffolk.litlab.efspserver.Person;
-import edu.suffolk.litlab.efspserver.tyler.codes.CaseCategory;
-import edu.suffolk.litlab.efspserver.tyler.codes.CaseType;
+import edu.suffolk.litlab.efspserver.codes.CaseCategory;
+import edu.suffolk.litlab.efspserver.codes.CaseType;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;

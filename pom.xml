@@ -287,6 +287,12 @@
             <version>3.11.2</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>net.jqwik</groupId>
+          <artifactId>jqwik</artifactId>
+          <version>1.7.1</version>
+          <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <finalName>${project.artifactId}</finalName>

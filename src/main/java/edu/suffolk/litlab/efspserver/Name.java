@@ -21,11 +21,29 @@ public class Name {
       String lastName,
       String suffix,
       String maidenName) {
+    if (prefix == null) {
+      prefix = "";
+    }
     this.prefix = prefix;
+    if (firstName == null) {
+      firstName = "";
+    }
     this.firstName = firstName;
+    if (middleName == null) {
+      middleName = "";
+    }
     this.middleName = middleName;
+    if (lastName == null) {
+      lastName = "";
+    }
     this.lastName = lastName;
+    if (suffix == null) {
+      suffix = "";
+    }
     this.suffix = suffix;
+    if (maidenName == null) {
+      maidenName = "";
+    }
     this.maidenName = maidenName;
   }
 
@@ -39,6 +57,9 @@ public class Name {
 
   /** The full name, with no extra spaces. */
   public String getFullName() {
+    if (prefix.isBlank() && firstName.isBlank() && middleName.isBlank() && suffix.isBlank()) {
+      return "(No name given)";
+    }
     return Stream.of(prefix, firstName, middleName, lastName, suffix)
         .reduce(
             (wd, n) -> {
@@ -65,9 +86,14 @@ public class Name {
     return lastName;
   }
 
-  /** If there's only a first name, then us it, otherwise take only the last name */
+  /** If there's only a first name, then us it, otherwise take only the last name. Used to create
+   * the titles of cases, i.e. Jones v. Discover, etc.
+   */
   public String getTitleName() {
     if (lastName == null || lastName.isBlank()) {
+      if (firstName == null || firstName.isBlank()) {
+        return "(Unnamed)";
+      }
       return firstName;
     } else {
       return lastName;
