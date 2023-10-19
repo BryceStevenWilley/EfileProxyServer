@@ -9,16 +9,23 @@ import java.util.Map;
 import java.util.Optional;
 
 public class CaseType {
-  public final String code;
-  public final String name;
-  public final String casecategory;
+  private final String code;
+  private final String name;
+  /** Associates the code to a particular case category. */
+  private final String casecategory;
   /** Whether the court accepts new cases of this type. */
-  public final boolean initial;
+  private final boolean initial;
 
-  public final BigDecimal fee;
-  public final String willfileddate;
-  public final String efspcode;
-  public final String location;
+  /** The court's fee for initiating a case of this case type. */
+  private final BigDecimal fee;
+  /**
+   * Indicates the behavior of the date field for the filing of a will for this case type (Not
+   * Available, Available, Required).
+   */
+  private final String willfileddate;
+
+  private final String efspcode;
+  private final String location;
 
   public CaseType(
       String code,
@@ -56,6 +63,40 @@ public class CaseType {
         rs.getString(6),
         rs.getString(7),
         rs.getString(8));
+  }
+
+  public String getCode() {
+    return code;
+  }
+
+  public Optional<String> getName() {
+    return Optional.ofNullable(this.name);
+  }
+
+  public Optional<String> getCaseCategory() {
+    return Optional.ofNullable(this.casecategory);
+  }
+
+  public boolean isInitial() {
+    return initial;
+  }
+
+  /**
+   * Since the fee is only on initial cases, and case types not in codes DB are always in older
+   * cases, then there will always be no fee involved here.
+   *
+   * @return
+   */
+  public BigDecimal getFee() {
+    return (fee != null) ? fee : new BigDecimal(0.0);
+  }
+
+  public Optional<String> getWillFiledDate() {
+    return Optional.ofNullable(this.willfileddate);
+  }
+
+  public Optional<String> getEfspcode() {
+    return Optional.ofNullable(this.efspcode);
   }
 
   /** Turns the object into a map; attributes can be combined with HATEOS endpoints */

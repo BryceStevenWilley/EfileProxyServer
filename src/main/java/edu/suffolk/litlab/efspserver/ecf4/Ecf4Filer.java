@@ -200,8 +200,6 @@ public class Ecf4Filer extends EfmCheckableFilingInterface {
       }
 
       EcfCourtSpecificSerializer serializer = new EcfCourtSpecificSerializer(cd, locationInfo);
-      boolean isInitialFiling =
-          info.getPreviousCaseId().isEmpty() && info.getCaseDocketNumber().isEmpty();
       boolean isFirstIndexedFiling = info.getPreviousCaseId().isEmpty();
       ComboCaseCodes allCodes;
       if (!isFirstIndexedFiling) {
@@ -253,11 +251,17 @@ public class Ecf4Filer extends EfmCheckableFilingInterface {
             "Existing cat, type, and filings: " + catCode + "," + typeCode + "," + filingCodeStrs);
         allCodes =
             serializer.serializeCaseCodesIndexed(
-                catCode, typeCode, filingCodeStrs, existingPartyCodes, newPartyCodes, collector);
+                catCode,
+                typeCode,
+                filingCodeStrs,
+                existingPartyCodes,
+                newPartyCodes,
+                collector,
+                info.isInitialFiling());
       } else {
-        allCodes = serializer.serializeCaseCodes(info, collector, isInitialFiling);
+        allCodes = serializer.serializeCaseCodes(info, collector, info.isInitialFiling());
       }
-      caseCategoryName = allCodes.cat.name;
+      caseCategoryName = allCodes.cat.getName().orElse(allCodes.cat.getCode());
       log.info("have all codes");
 
       var coreObjFac =
@@ -304,7 +308,7 @@ public class Ecf4Filer extends EfmCheckableFilingInterface {
               locationInfo,
               allCodes,
               info,
-              isInitialFiling,
+              info.isInitialFiling(),
               isFirstIndexedFiling,
               queryType,
               info.getMiscInfo(),
@@ -315,7 +319,7 @@ public class Ecf4Filer extends EfmCheckableFilingInterface {
       log.info("Assembled case");
 
       Map<String, String> crossReferences =
-          serializer.getCrossRefIds(info.getMiscInfo(), collector, allCodes.type.code);
+          serializer.getCrossRefIds(info.getMiscInfo(), collector, allCodes.type.getCode());
       for (Map.Entry<String, String> ref : crossReferences.entrySet()) {
         IdentificationType id = niemObjFac.createIdentificationType();
         id.setIdentificationID(Ecf4Helper.convertString(ref.getValue()));
@@ -332,7 +336,7 @@ public class Ecf4Filer extends EfmCheckableFilingInterface {
             Optional.of(
                 cd.getDataField(locationInfo.code, "FilingServiceCheckBoxInitial").isvisible);
       }
-      if (isInitialFiling
+      if (info.isInitialFiling()
           && !serviceOnInitial.orElse(
               cd.getDataField(locationInfo.code, "FilingServiceCheckBoxInitial").isvisible)
           && info.getServiceContacts().size() > 0) {
@@ -343,7 +347,9 @@ public class Ecf4Filer extends EfmCheckableFilingInterface {
       }
       DataFieldRow checkBoxSub =
           cd.getDataField(locationInfo.code, "FilingServiceCheckBoxSubsequent");
-      if (!isInitialFiling && !checkBoxSub.isvisible && info.getServiceContacts().size() > 0) {
+      if (!info.isInitialFiling()
+          && !checkBoxSub.isvisible
+          && info.getServiceContacts().size() > 0) {
         FilingError err =
             FilingError.malformedInterview(
                 "Court " + locationInfo.name + " doesn't allow service on subsequent filings");
@@ -389,7 +395,7 @@ public class Ecf4Filer extends EfmCheckableFilingInterface {
             serializer.filingDocToXml(
                 filingDoc,
                 seqNum,
-                isInitialFiling,
+                info.isInitialFiling(),
                 allCodes.cat,
                 allCodes.type,
                 fc,

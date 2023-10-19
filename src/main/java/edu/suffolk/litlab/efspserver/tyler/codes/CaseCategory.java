@@ -4,39 +4,52 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Optional;
 
+/** Only necessary on initial filings. */
 public class CaseCategory {
   /** The Tyler specific code for this case category. E.g.: 183528 */
-  public final String code;
+  private final String code;
   /**
    * A human understandable name for this category. Can be broad, like "Probate", or specific, like
    * "Law Magistrate: Damages over $10,000 up to $50,000
    */
-  public final String name;
+  private final String name;
   /**
    * The ECF Case Type Schema Name. These are things like "AppellateCase", "BankruptcyCase", etc.
    * The full list is at
    * https://docs.oasis-open.org/legalxml-courtfiling/specs/ecf/v4.01/ecf-v4.01-spec/errata02/os/ecf-v4.01-spec-errata02-os-complete.html#_Toc425241622
    */
-  public final String ecfcasetype;
+  private final String ecfcasetype;
   // TODO(brycew-later): turn these into enums
   /**
    * Indicates the behavior of the Procedure/Remedy code field for initial filings E.g.: (Not
    * Available, Available, Required)
    */
-  public final String procedureremedyinitial;
+  private final String procedureremedyinitial;
   /**
    * Indicates the behavior of the Procedure/Remedy code field for subsequent filings E.g.: (Not
    * Available, Available, Required)
    */
-  public final String procedureremedysubsequent;
+  private final String procedureremedysubsequent;
   /**
    * Indicates the behavior of the DamageAmount code field for initial filings. E.g.: (Not
    * Available, Available, Required)
    */
-  public final String damageamountinitial;
+  private final String damageamountinitial;
 
-  public final String damageamountsubsequent;
+  private final String damageamountsubsequent;
+
+  /** Only use this contructor if we couldn't find one from the Codes DB (older case). */
+  public CaseCategory(String code) {
+    this.code = code;
+    this.name = null;
+    this.ecfcasetype = null;
+    this.procedureremedyinitial = null;
+    this.procedureremedysubsequent = null;
+    this.damageamountinitial = null;
+    this.damageamountsubsequent = null;
+  }
 
   public CaseCategory(
       String code,
@@ -68,6 +81,30 @@ public class CaseCategory {
 
   public String getCode() {
     return code;
+  }
+
+  public Optional<String> getName() {
+    return Optional.ofNullable(this.name);
+  }
+
+  public Optional<String> getEcfCaseType() {
+    return Optional.ofNullable(this.ecfcasetype);
+  }
+
+  public String getProcedureRemedyInitial() {
+    return (procedureremedyinitial != null) ? procedureremedyinitial : "Not Available";
+  }
+
+  public String getProcedureRemedySubsequent() {
+    return (procedureremedysubsequent != null) ? procedureremedysubsequent : "Not Available";
+  }
+
+  public String getDamageAmountInitial() {
+    return (damageamountinitial != null) ? damageamountinitial : "Not Available";
+  }
+
+  public String getDamageAmountSubsequent() {
+    return (damageamountsubsequent != null) ? damageamountsubsequent : "Not Available";
   }
 
   public static PreparedStatement prepFilableQueryTiming(

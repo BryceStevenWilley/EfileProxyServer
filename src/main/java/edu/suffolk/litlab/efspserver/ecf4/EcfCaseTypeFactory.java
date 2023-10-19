@@ -295,7 +295,9 @@ public class EcfCaseTypeFactory {
             serviceContactToXmlObjs);
     JAXBElement<tyler.ecf.extensions.common.CaseAugmentationType> tylerAug = pair.getLeft();
     JAXBElement<? extends gov.niem.niem.niem_core._2.CaseType> myCase;
-    if (comboCodes.cat.ecfcasetype.equals("CivilCase")) {
+    // TODO(brycew): This in NOT correct. Wait on Tyler case 10482535 for how to fix.
+    String ecfcasetype = comboCodes.cat.getEcfCaseType().orElse("CivilCase");
+    if (ecfcasetype.equals("CivilCase")) {
       Optional<BigDecimal> amountInControversy = Optional.empty();
       boolean anyAmountInControversy =
           comboCodes.filings.stream()
@@ -316,25 +318,25 @@ public class EcfCaseTypeFactory {
               info.getCaseDocketNumber(),
               info.getPreviousCaseId(),
               amountInControversy);
-    } else if (comboCodes.cat.ecfcasetype.equals("DomesticCase")) {
+    } else if (ecfcasetype.equals("DomesticCase")) {
       myCase =
           makeDomesticCaseType(
               caseAug, tylerAug, info.getCaseDocketNumber(), info.getPreviousCaseId(), miscInfo);
-    } else if (comboCodes.cat.ecfcasetype.equals("AppellateCase")) {
+    } else if (ecfcasetype.equals("AppellateCase")) {
       myCase = makeAppellateCaseType(caseAug, tylerAug, info, miscInfo, collector);
-    } else if (comboCodes.cat.ecfcasetype.equals("BankruptcyCase")
-        || comboCodes.cat.ecfcasetype.equals("CitationCase")
-        || comboCodes.cat.ecfcasetype.equals("JuvenileCase")
-        || comboCodes.cat.ecfcasetype.equals("CriminalCase")) {
+    } else if (ecfcasetype.equals("BankruptcyCase")
+        || ecfcasetype.equals("CitationCase")
+        || ecfcasetype.equals("JuvenileCase")
+        || ecfcasetype.equals("CriminalCase")) {
       // TODO(brycew): handle these
       InterviewVariable var =
           collector.requestVar(
               "efile_case_category",
               "The "
-                  + comboCodes.cat.name
+                  + comboCodes.cat.getName().orElse(comboCodes.cat.getCode())
                   + " Case category requires an ECF case type that we know about but don't yet"
                   + " support ("
-                  + comboCodes.cat.ecfcasetype
+                  + ecfcasetype
                   + ")",
               "text");
       collector.addWrong(var);
@@ -345,16 +347,16 @@ public class EcfCaseTypeFactory {
           collector.requestVar(
               "efile_case_category",
               "The "
-                  + comboCodes.cat.name
+                  + comboCodes.cat.getName().orElse(comboCodes.cat.getCode())
                   + " Case category requires an ECF case type that we don't know about or support ("
-                  + comboCodes.cat.ecfcasetype
+                  + ecfcasetype
                   + ")",
               "text");
       collector.addWrong(var);
       FilingError err = FilingError.wrongValue(var);
       throw err;
     }
-    myCase.getValue().setCaseCategoryText(Ecf4Helper.convertText(comboCodes.cat.code));
+    myCase.getValue().setCaseCategoryText(Ecf4Helper.convertText(comboCodes.cat.getCode()));
     return Pair.of(myCase, pair.getRight());
   }
 
@@ -388,16 +390,17 @@ public class EcfCaseTypeFactory {
           throws SQLException, FilingError {
     var ecfAug = tylerObjFac.createCaseAugmentationType();
 
-    if (comboCodes.type.code.isEmpty()) {
+    if (comboCodes.type.getCode().isEmpty()) {
       log.warn("Type's code is empty?: " + comboCodes);
     } else {
       log.info("Setting case type text to " + comboCodes.type.toString());
-      ecfAug.setCaseTypeText(Ecf4Helper.convertText(comboCodes.type.code));
+      ecfAug.setCaseTypeText(Ecf4Helper.convertText(comboCodes.type.getCode()));
     }
 
     DataFieldRow subTypeConfig = serializer.allDataFields.getFieldRow("CaseInformationCaseSubType");
     if (subTypeConfig.isvisible) {
-      List<NameAndCode> subTypes = cd.getCaseSubtypesFor(courtLocation.code, comboCodes.type.code);
+      List<NameAndCode> subTypes =
+          cd.getCaseSubtypesFor(courtLocation.code, comboCodes.type.getCode());
       Optional<NameAndCode> maybeSubtype =
           subTypes.stream()
               .filter(type -> type.getCode().equals(info.getCaseSubtypeCode()))
@@ -416,7 +419,7 @@ public class EcfCaseTypeFactory {
       }
     }
 
-    List<PartyType> partyTypes = cd.getPartyTypeFor(courtLocation.code, comboCodes.type.code);
+    List<PartyType> partyTypes = cd.getPartyTypeFor(courtLocation.code, comboCodes.type.getCode());
     Set<String> requiredTypes =
         partyTypes.stream().filter(t -> t.isrequired).map(t -> t.code).collect(Collectors.toSet());
     Set<String> presentPartyTypes = new HashSet<>();
@@ -725,7 +728,8 @@ public class EcfCaseTypeFactory {
     List<NameAndCode> procedureRemedies = cd.getProcedureOrRemedy(courtLocationId, cat.getCode());
     String procedureViewName = "CivilCaseProcedureView" + ((initial) ? "Initial" : "Subsequent");
     DataFieldRow procedureView = DataFieldRow.MissingDataField(procedureViewName);
-    String procBehavior = (initial) ? cat.procedureremedyinitial : cat.procedureremedysubsequent;
+    String procBehavior =
+        (initial) ? cat.getProcedureRemedyInitial() : cat.getProcedureRemedySubsequent();
     if (!procBehavior.isEmpty() && !procBehavior.equals("Not Available")) {
       procedureView = serializer.allDataFields.getFieldRow(procedureViewName);
     }
@@ -783,7 +787,8 @@ public class EcfCaseTypeFactory {
       throws SQLException, FilingError {
     List<NameAndCode> damageAmounts = cd.getDamageAmount(courtLocationId, cat.getCode());
     DataFieldRow damageConfig = cd.getDataField(courtLocationId, "DamageAmount");
-    String damgBehavior = (initial) ? cat.damageamountinitial : cat.damageamountsubsequent;
+    String damgBehavior =
+        (initial) ? cat.getDamageAmountInitial() : cat.getDamageAmountSubsequent();
     if (!damgBehavior.isEmpty() && !damgBehavior.equals("Not Available")) {
       damageConfig =
           serializer.allDataFields.getFieldRow(

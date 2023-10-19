@@ -305,7 +305,13 @@ public class CourtSchedulingService {
                   + filingCodeStrs);
           allCodes =
               serializer.serializeCaseCodesIndexed(
-                  catCode, typeCode, filingCodeStrs, newPartyMap, existingPartyMap, collector);
+                  catCode,
+                  typeCode,
+                  filingCodeStrs,
+                  newPartyMap,
+                  existingPartyMap,
+                  collector,
+                  info.isInitialFiling());
         } else {
           allCodes = serializer.serializeCaseCodes(info, collector, isInitialFiling);
         }

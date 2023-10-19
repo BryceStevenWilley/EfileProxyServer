@@ -114,12 +114,15 @@ public class Ecfv5CaseTypeFactory {
     }
 
     var ecfAug = oasisObjFac.createCaseAugmentationType();
-    ecfAug.getRest().add(oasisObjFac.createCaseCategoryCode(convertText(allCodes.cat.code)));
-    ecfAug.getRest().add(oasisObjFac.createCaseTypeCode(convertNormalized(allCodes.type.code)));
+    ecfAug.getRest().add(oasisObjFac.createCaseCategoryCode(convertText(allCodes.cat.getCode())));
+    ecfAug
+        .getRest()
+        .add(oasisObjFac.createCaseTypeCode(convertNormalized(allCodes.type.getCode())));
 
     // TODO(brycew-later): write ecfv5 versions of this. Right now, don't have time to reimplement
     // everything, so checking with old ecfv4 code and building here
-    List<PartyType> partyTypes = cd.getPartyTypeFor(info.getCourtLocation(), allCodes.type.code);
+    List<PartyType> partyTypes =
+        cd.getPartyTypeFor(info.getCourtLocation(), allCodes.type.getCode());
     Map<PartyId, EntityType> idToCaseParty = new HashMap<PartyId, EntityType>();
 
     try {
@@ -242,7 +245,7 @@ public class Ecfv5CaseTypeFactory {
 
     try {
       Map<String, String> crossReferences =
-          serializer.getCrossRefIds(info.getMiscInfo(), collector, allCodes.type.code);
+          serializer.getCrossRefIds(info.getMiscInfo(), collector, allCodes.type.getCode());
       for (Map.Entry<String, String> refs : crossReferences.entrySet()) {
         IdentificationType idType = niemObjFac.createIdentificationType();
         idType.setIdentificationID(convertString(refs.getValue()));

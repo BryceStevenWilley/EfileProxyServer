@@ -113,11 +113,17 @@ public class EcfCourtSpecificSerializer {
       List<String> filingCodeStrs,
       Map<String, Person> existingParties,
       Map<String, Person> newParties,
-      InfoCollector collector)
+      InfoCollector collector,
+      boolean isInitialFiling)
       throws FilingError {
     CaseCategory caseCategory =
-        vetCaseCat(cd.getCaseCategoryWithCode(this.court.code, caseCategoryCode), collector);
-    List<CaseType> caseTypes = cd.getCaseTypesFor(court.code, caseCategory.code, Optional.empty());
+        vetCaseCat(
+            cd.getCaseCategoryWithCode(this.court.code, caseCategoryCode)
+                .orElse(new CaseCategory(caseCategoryCode)),
+            isInitialFiling,
+            collector);
+    List<CaseType> caseTypes =
+        cd.getCaseTypesFor(court.code, caseCategory.getCode(), Optional.empty());
     Optional<CaseType> maybeType = cd.getCaseTypeWith(court.code, caseTypeCode);
     CaseType type = vetCaseType(maybeType, caseTypes, caseCategory, collector, false);
     List<FilingCode> filingRealCodes =
@@ -132,19 +138,26 @@ public class EcfCourtSpecificSerializer {
       FilingInformation info, InfoCollector collector, boolean isInitialFiling) throws FilingError {
     Optional<CaseCategory> maybeCaseCat =
         cd.getCaseCategoryWithCode(this.court.code, info.getCaseCategoryCode());
-    CaseCategory caseCategory = vetCaseCat(maybeCaseCat, collector);
+    CaseCategory caseCategory =
+        vetCaseCat(
+            maybeCaseCat.orElse(new CaseCategory(info.getCaseCategoryCode())),
+            isInitialFiling,
+            collector);
 
-    List<CaseType> caseTypes = cd.getCaseTypesFor(court.code, caseCategory.code, Optional.empty());
+    List<CaseType> caseTypes =
+        cd.getCaseTypesFor(court.code, caseCategory.getCode(), Optional.empty());
     Optional<CaseType> maybeType =
-        caseTypes.stream().filter(type -> type.code.equals(info.getCaseTypeCode())).findFirst();
+        caseTypes.stream()
+            .filter(type -> type.getCode().equals(info.getCaseTypeCode()))
+            .findFirst();
     CaseType type = vetCaseType(maybeType, caseTypes, caseCategory, collector, isInitialFiling);
 
-    if (!type.initial && info.getCaseDocketNumber().isEmpty()) {
+    if (!type.isInitial() && info.isInitialFiling()) {
       FilingError err =
           FilingError.malformedInterview(
               "Subsequent filing case type ("
-                  + type.code
-                  + ") needs docket number, but not present");
+                  + type.getCode()
+                  + ") needs docket number or previous case id, but both not present");
       collector.error(err);
     }
 
@@ -159,22 +172,20 @@ public class EcfCourtSpecificSerializer {
       idx += 1;
       collector.popAttributeStack();
     }
-    List<String> filingCodeStrs =
-        info.getFilings().stream()
-            .map(f -> f.getFilingCode().orElse(""))
-            .collect(Collectors.toList());
-    List<FilingCode> filingCodes =
+    var filingCodeStrs = info.getFilings().stream().map(f -> f.getFilingCode().orElse("")).toList();
+    var filingCodes =
         vetFilingTypes(filingCodeStrs, caseCategory, type, collector, isInitialFiling);
-    Map<String, Person> partyInfo =
+    var partyInfo =
         Stream.concat(info.getNewPlaintiffs().stream(), info.getNewDefendants().stream())
             .collect(Collectors.toMap(per -> per.getIdString(), per -> per));
-    Map<String, Pair<PartyType, Boolean>> partyTypes = vetPartyTypes(Map.of(), partyInfo, type);
+    var partyTypes = vetPartyTypes(Map.of(), partyInfo, type);
     return new ComboCaseCodes(caseCategory, type, filingCodes, partyTypes);
   }
 
-  private CaseCategory vetCaseCat(Optional<CaseCategory> caseCat, InfoCollector collector)
-      throws FilingError {
-    if (caseCat.isEmpty()) {
+  private CaseCategory vetCaseCat(
+      CaseCategory caseCat, boolean isInitialFiling, InfoCollector collector) throws FilingError {
+    // Can't be a non-existent case cat for initial filings, only existing filings.
+    if (caseCat.getName().isEmpty() && isInitialFiling) {
       List<CaseCategory> categories = cd.getCaseCategoriesFor(court.code);
       // TODO(brycew-later): handle that these variables could be different from different
       // deserializers
@@ -183,12 +194,12 @@ public class EcfCourtSpecificSerializer {
               "efile_case_category",
               "",
               "choice",
-              categories.stream().map(cat -> cat.code).collect(Collectors.toList()));
+              categories.stream().map(cat -> cat.getCode()).toList());
       collector.addWrong(var);
       // Foundational error: Category is sorely needed
       throw FilingError.wrongValue(var);
     }
-    return caseCat.get();
+    return caseCat;
   }
 
   private CaseType vetCaseType(
@@ -198,32 +209,32 @@ public class EcfCourtSpecificSerializer {
       InfoCollector collector,
       boolean isInitialFiling)
       throws FilingError {
-    if (caseTypes.isEmpty()) {
+    if (caseTypes.isEmpty() && isInitialFiling) {
       FilingError err =
           FilingError.serverError(
-              "There are no caseTypes for " + court.code + " and " + caseCategory.code);
+              "There are no caseTypes for " + court.code + " and " + caseCategory.getCode());
       collector.error(err);
     }
-    if (maybeType.isEmpty()) {
+    if (maybeType.isEmpty() && isInitialFiling) {
       InterviewVariable var =
           collector.requestVar(
               "efile_case_type",
               "",
               "choice",
-              caseTypes.stream().map(type -> type.name).collect(Collectors.toList()));
+              caseTypes.stream().map(type -> type.getCode()).collect(Collectors.toList()));
       collector.addWrong(var);
       throw FilingError.wrongValue(var);
     }
     CaseType type = maybeType.get();
     // Check if the court doesn't handle this type (initial vs subsequent) of filing
-    if (isInitialFiling && (!type.initial || !court.initial)) {
+    if (isInitialFiling && (!type.isInitial() || !court.initial)) {
       FilingError err =
           FilingError.malformedInterview(
               "An Initial"
                   + " filing can't be filed at "
                   + court.name
                   + " or be of filing type "
-                  + type.name);
+                  + type.getName().orElse("code: " + type.getCode()));
       collector.error(err);
     } else if (!isInitialFiling && (!court.subsequent)) {
       FilingError err =
@@ -242,7 +253,7 @@ public class EcfCourtSpecificSerializer {
       boolean isInitialFiling)
       throws FilingError {
     List<FilingCode> filingOptions =
-        cd.getFilingType(court.code, caseCategory.code, type.code, isInitialFiling);
+        cd.getFilingType(court.code, caseCategory.getCode(), type.getCode(), isInitialFiling);
     List<Optional<FilingCode>> maybeCodes =
         maybeCodeStrs.stream()
             .map(
@@ -300,7 +311,7 @@ public class EcfCourtSpecificSerializer {
   private Map<String, Pair<PartyType, Boolean>> vetPartyTypes(
       Map<String, Person> existingParties, Map<String, Person> newParties, CaseType type)
       throws FilingError {
-    List<PartyType> pTypesForCase = cd.getPartyTypeFor(court.code, type.code);
+    List<PartyType> pTypesForCase = cd.getPartyTypeFor(court.code, type.getCode());
     Map<String, PartyType> codeToPartyType =
         pTypesForCase.stream().collect(Collectors.toMap(pt -> pt.code, pt -> pt));
     // So, Tyler lies: it's possible for older cases to have party types that aren't allowed
@@ -355,7 +366,7 @@ public class EcfCourtSpecificSerializer {
                 + party.getValue().getRole()
                 + ") isn't a code?");
         if (codeToAllPartyType.isEmpty()) {
-          var allForCourt = cd.getPartyTypeFor(court.code, type.code);
+          var allForCourt = cd.getPartyTypeFor(court.code, type.getCode());
           codeToAllPartyType =
               allForCourt.stream().collect(Collectors.toMap(pt -> pt.code, pt -> pt));
         }
